@@ -1,0 +1,125 @@
+# version: '3.8'
+
+# services:
+#   video-caption-gpu:
+#     build:
+#       context: .
+#       dockerfile: services/video_caption/Dockerfile
+#     container_name: video-caption-gpu
+#     restart: unless-stopped
+    
+    
+#     runtime: nvidia
+#     environment:
+#       - NVIDIA_VISIBLE_DEVICES=all
+#       - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+#       - CUDA_VISIBLE_DEVICES=0
+    
+    
+#     ports:
+#       - "5003:5003"
+    
+    
+#     environment:
+#       - FLASK_ENV=production
+#       - FLASK_DEBUG=false
+#       - PYTHONUNBUFFERED=1
+#       - UPLOAD_FOLDER=/tmp/caption_uploads
+#       - PROCESSED_FOLDER=/tmp/caption_processed
+#       - FONT_FOLDER=/app/fonts
+#       - CAPTION_SERVICE_API_KEY=YourSecretApiKeyForCaptionService123
+#       - MAX_FILE_SIZE_MB=200
+#       - MAX_VIDEO_DURATION_SECONDS=600
+#       - WHISPER_MODEL_SIZE=small
+#       - TORCH_HOME=/app/.cache/torch
+    
+    
+#     volumes:
+#       - /tmp/caption_uploads:/tmp/caption_uploads
+#       - /tmp/caption_processed:/tmp/caption_processed
+#       - caption_cache:/app/.cache
+    
+    
+#     deploy:
+#       resources:
+#         reservations:
+#           devices:
+#             - driver: nvidia
+#               count: 1
+#               capabilities: [gpu]
+    
+    
+#     healthcheck:
+#       test: ["CMD", "curl", "-f", "http://localhost:5003/health"]
+#       interval: 30s
+#       timeout: 10s
+#       retries: 3
+#       start_period: 60s
+    
+    
+#     logging:
+#       driver: "json-file"
+#       options:
+#         max-size: "10m"
+#         max-file: "3"
+
+# volumes:
+#   caption_cache:
+#     driver: local
+
+
+
+
+version: '3.8'
+
+services:
+  video-caption-gpu-alternative:
+    build:
+      context: .
+      dockerfile: services/video_caption/Dockerfile
+    container_name: video-caption-gpu-alt
+    restart: unless-stopped
+    
+    
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    
+    ports:
+      - "5003:5003"
+    
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+      - CUDA_VISIBLE_DEVICES=0
+      - FLASK_ENV=production
+      - FLASK_DEBUG=false
+      - PYTHONUNBUFFERED=1
+      - UPLOAD_FOLDER=/tmp/caption_uploads
+      - PROCESSED_FOLDER=/tmp/caption_processed
+      - FONT_FOLDER=/app/fonts
+      - CAPTION_SERVICE_API_KEY=YourSecretApiKeyForCaptionService123
+      - MAX_FILE_SIZE_MB=200
+      - MAX_VIDEO_DURATION_SECONDS=600
+      - WHISPER_MODEL_SIZE=small
+      - TORCH_HOME=/app/.cache/torch
+    
+    volumes:
+      - /tmp/caption_uploads:/tmp/caption_uploads
+      - /tmp/caption_processed:/tmp/caption_processed
+      - caption_cache:/app/.cache
+    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  caption_cache:
+    driver: local

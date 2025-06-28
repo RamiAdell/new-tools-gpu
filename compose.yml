@@ -1,0 +1,107 @@
+version: '3.8'
+
+services:
+
+  # gpu-checker:
+  #   build: ./test-gpu
+  #   ports:
+  #     - "5000:5000"
+  #   deploy:
+  #     resources:
+  #       reservations:
+  #         devices:
+  #           - driver: nvidia
+  #             count: all
+  #             capabilities: [gpu]
+  #   runtime: nvidia
+    
+  # background-removal-app:
+  #   build:
+  #     context: ./v-bg-remover
+  #     dockerfile: Dockerfile
+  #   ports:
+  #     - "5550:5550"
+  #   volumes:
+  #     - /tmp/uploads:/tmp/uploads
+  #     - /tmp/processed:/tmp/processed
+  #   environment:
+  #     - FLASK_ENV=production
+  #     - CUDA_VISIBLE_DEVICES=0
+  #   deploy:
+  #     resources:
+  #       reservations:
+  #         devices:
+  #           - driver: nvidia
+  #             count: 1
+  #             capabilities: [gpu]
+  #   restart: unless-stopped
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-f", "http://localhost:5550/health"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
+  text_to_cartoon-gpu:
+    build: ./text-to-cartoon
+    container_name: huggingface_gpu_api_prod
+    ports:
+      - "5006:5006"
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+    volumes:
+      - ./static/processed:/app/static/processed
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+  video-caption-gpu-alternative:
+    build:
+      context: ./video-caption
+      dockerfile: Dockerfile
+    container_name: video-caption-gpu-alt
+    restart: unless-stopped
+    runtime: nvidia
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    ports:
+      - "5003:5003"
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+      - CUDA_VISIBLE_DEVICES=0
+      - FLASK_ENV=production
+      - FLASK_DEBUG=false
+      - PYTHONUNBUFFERED=1
+      - UPLOAD_FOLDER=/tmp/caption_uploads
+      - PROCESSED_FOLDER=/tmp/caption_processed
+      - FONT_FOLDER=/app/fonts
+      - CAPTION_SERVICE_API_KEY=YourSecretApiKeyForCaptionService123
+      - MAX_FILE_SIZE_MB=200
+      - MAX_VIDEO_DURATION_SECONDS=600
+      - WHISPER_MODEL_SIZE=small
+      - TORCH_HOME=/app/.cache/torch
+      # Critical: Force single-threaded execution to avoid CUDA forking issues
+      - OMP_NUM_THREADS=1
+      - MKL_NUM_THREADS=1
+      - NUMEXPR_NUM_THREADS=1
+      # Disable multiprocessing for moviepy and other libraries
+      - CUDA_LAUNCH_BLOCKING=1
+    volumes:
+      - /tmp/caption_uploads:/tmp/caption_uploads
+      - /tmp/caption_processed:/tmp/caption_processed
+      - caption_cache:/app/.cache
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  caption_cache:

@@ -1,0 +1,38 @@
+# Flask and web framework
+Flask==2.3.3
+flask-cors==4.0.0
+Werkzeug==2.3.7
+gunicorn==21.2.0
+
+# Video and audio processing
+moviepy==1.0.3
+opencv-python==4.8.1.78
+Pillow==10.0.1
+pydub==0.25.1
+
+# Audio transcription and AI
+openai-whisper==20231117
+transformers==4.35.2
+
+# PyTorch with CUDA support (installed separately in Dockerfile)
+# These versions match CUDA 12.1
+# torch==2.1.2+cu121
+# torchvision==0.16.2+cu121
+# torchaudio==2.1.2+cu121
+
+# Text processing and translation
+pysrt==1.1.2
+arabic-reshaper==3.0.0
+python-bidi==0.4.2
+deep-translator==1.11.4
+
+# Numerical computing
+numpy==1.24.3
+scipy==1.11.4
+
+# HTTP requests and utilities
+requests==2.31.0
+urllib3==2.0.7
+
+# Logging and monitoring
+psutil==5.9.6
