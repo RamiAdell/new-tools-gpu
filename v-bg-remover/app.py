@@ -77,18 +77,22 @@ setup_gpu()
 
 
 try:
-    logger.info("Initializing rembg session with GPU support...")
-
-    rembg_session = new_session('u2net', providers=['CUDAExecutionProvider', 'CPUExecutionProvider'])
-    logger.info("rembg session initialized successfully with GPU support")
+    # Explicit GPU configuration
+    rembg_session = new_session(
+        'u2net',
+        providers=[
+            ('CUDAExecutionProvider', {
+                'device_id': 0,
+                'gpu_mem_limit': 4 * 1024 * 1024 * 1024,  # 4GB GPU memory
+                'arena_extend_strategy': 'kSameAsRequested'
+            }),
+            'CPUExecutionProvider'  # Fallback
+        ]
+    )
+    logger.info(f"GPU session initialized with providers: {rembg_session.providers}")
 except Exception as e:
-    logger.error(f"Failed to initialize rembg with GPU, falling back to CPU: {e}")
-    try:
-        rembg_session = new_session('u2net')
-        logger.info("rembg session initialized with CPU fallback")
-    except Exception as e2:
-        logger.error(f"Failed to initialize rembg session: {e2}")
-        rembg_session = None
+    logger.error(f"GPU init failed: {e}")
+    rembg_session = new_session('u2netp')  # Lighter CPU fallback
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -237,6 +241,15 @@ def verify_api_key():
     if api_key != API_KEY:
         logger.warning(f"Unauthorized access attempt from {request.remote_addr}")
         return jsonify({'error': 'Unauthorized'}), 401
+
+@app.route('/debug/gpu')
+def debug_gpu():
+    import torch, onnxruntime
+    return jsonify({
+        "torch.cuda_available": torch.cuda.is_available(),
+        "torch.device_name": torch.cuda.get_device_name(0) if torch.cuda.is_available() else None,
+        "onnxruntime_gpu": 'CUDAExecutionProvider' in onnxruntime.get_available_providers()
+    })
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
