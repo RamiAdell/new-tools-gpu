@@ -151,6 +151,9 @@ def remove_background_from_video(input_video_path, output_video_path, progress_c
     
     try:
         while cap.isOpened():
+                        
+            logger.info(f"rembg session providers: {rembg_session.providers}")
+            logger.info(f"Current device: {torch.cuda.current_device() if torch.cuda.is_available() else 'CPU'}")
             ret, frame = cap.read()
             if not ret:
                 logger.info("End of video reached")
