@@ -111,14 +111,25 @@ def remove_background_from_video(input_video_path, output_video_path, progress_c
     
     logger.info(f"Video properties: {width}x{height}, {fps} fps, {frame_count} frames")
     
-
-    fourcc = cv2.VideoWriter_fourcc(*'H264')
-    out = cv2.VideoWriter(output_video_path, fourcc, fps, (width, height), True)
+    # Try multiple codecs in order of preference
+    codecs_to_try = ['avc1', 'mp4v', 'X264', 'H264']
+    out = None
     
-    if not out.isOpened():
-        logger.error("Failed to open output video writer")
-        raise Exception("Could not create output video file")
+    for codec in codecs_to_try:
+        fourcc = cv2.VideoWriter_fourcc(*codec)
+        out = cv2.VideoWriter(output_video_path, fourcc, fps, (width, height), True)
+        if out.isOpened():
+            logger.info(f"Successfully opened video writer with codec: {codec}")
+            break
+        else:
+            logger.warning(f"Failed to open video writer with codec: {codec}")
+            out = None
     
+    if out is None:
+        logger.error("Failed to open output video writer with any codec")
+        raise Exception("Could not create output video file - no suitable codec found")
+    
+    # Rest of your function remains the same...
     processed_frames = 0
     start_time = time.time()
     
@@ -130,16 +141,12 @@ def remove_background_from_video(input_video_path, output_video_path, progress_c
                 break
             
             try:
-                
                 frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                
                 output_rgba = remove(frame_rgb, session=rembg_session)
                 
                 if output_rgba.shape[2] == 4:  
                     background = np.ones((height, width, 3), dtype=np.uint8) * 255
-                    
                     alpha = output_rgba[:, :, 3:4] / 255.0
-                    
                     output_rgb = output_rgba[:, :, :3] * alpha + background * (1 - alpha)
                     output_bgr = cv2.cvtColor(output_rgb.astype(np.uint8), cv2.COLOR_RGB2BGR)
                 else:
@@ -174,7 +181,7 @@ def remove_background_from_video(input_video_path, output_video_path, progress_c
         out.release()
         total_time = time.time() - start_time
         logger.info(f"Video processing completed: {processed_frames} frames in {total_time:.2f}s (avg {processed_frames/total_time:.1f} fps)")
-
+        
 @app.before_request
 def verify_api_key():
     if request.path == '/progress':
