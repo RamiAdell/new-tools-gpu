@@ -77,22 +77,28 @@ setup_gpu()
 
 
 try:
-    # Explicit GPU configuration
-    rembg_session = new_session(
-        'u2net',
-        providers=[
-            ('CUDAExecutionProvider', {
-                'device_id': 0,
-                'gpu_mem_limit': 4 * 1024 * 1024 * 1024,  # 4GB GPU memory
-                'arena_extend_strategy': 'kSameAsRequested'
-            }),
-            'CPUExecutionProvider'  # Fallback
-        ]
-    )
-    logger.info(f"GPU session initialized with providers: {rembg_session.providers}")
+    import onnxruntime as ort
+    # Explicitly check for CUDA provider
+    if 'CUDAExecutionProvider' in ort.get_available_providers():
+        options = ort.SessionOptions()
+        options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
+        rembg_session = new_session(
+            'u2net',
+            providers=[
+                ('CUDAExecutionProvider', {
+                    'device_id': 0,
+                    'gpu_mem_limit': 4 * 1024 * 1024 * 1024,
+                    'arena_extend_strategy': 'kSameAsRequested'
+                })
+            ],
+            sess_options=options
+        )
+        logger.info(f"GPU session initialized with providers: {rembg_session.providers}")
+    else:
+        raise RuntimeError("CUDA provider not available")
 except Exception as e:
     logger.error(f"GPU init failed: {e}")
-    rembg_session = new_session('u2netp')  # Lighter CPU fallback
+    rembg_session = new_session('u2netp')  # Fallback to lighter CPU model
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS

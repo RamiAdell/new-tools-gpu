@@ -1,4 +1,4 @@
-FROM nvidia/cuda:12.1.0-devel-ubuntu22.04
+FROM nvidia/cuda:12.1.1-base
 
 ENV PYTHONUNBUFFERED=1
 ENV CUDA_VISIBLE_DEVICES=0
@@ -33,12 +33,25 @@ RUN apt-get update && \
 RUN ln -s /usr/bin/python3 /usr/bin/python
 
 WORKDIR /app
-
-RUN pip3 install --upgrade pip && \
-    pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
 RUN apt-get update && apt-get install -y \
+    python3.10 \
+    python3-pip \
     ffmpeg \
-    libx264-dev
+    libsm6 \
+    libxext6 \
+    && rm -rf /var/lib/apt/lists/*
+
+    # Set up Python environment
+RUN python3.10 -m pip install --upgrade pip
+RUN pip install \
+    torch==2.0.1+cu118 \
+    torchvision==0.15.2+cu118 \
+    --extra-index-url https://download.pytorch.org/whl/cu118
+
+# Install ONNX Runtime with CUDA 12 support
+RUN pip uninstall onnxruntime onnxruntime-gpu -y && \
+    pip install onnxruntime-gpu==1.16.3 \
+    --extra-index-url https://aiinfra.pkgs.visualstudio.com/PublicPackages/_packaging/onnxruntime-cuda-12/pypi/simple/
 COPY requirements.txt .
 RUN pip3 install --no-cache-dir -r requirements.txt
 
@@ -49,7 +62,9 @@ RUN python3 -c "from rembg import new_session; session = new_session('u2net', pr
 COPY . /app
 
 RUN mkdir -p /tmp/uploads /tmp/processed
-
+ENV FLASK_APP=app.py
+ENV FLASK_ENV=production
+ENV CUDA_VISIBLE_DEVICES=0
 ENV FLASK_APP=app.py
 ENV FLASK_ENV=production
 

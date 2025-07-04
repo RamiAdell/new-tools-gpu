@@ -4,11 +4,11 @@ opencv-python
 opencv-python-headless==4.9.0.80
 rembg==2.0.50
 pydub==0.25.1
-numpy==1.23.5
+numpy==1.24.3
 Pillow==10.0.0
 Werkzeug<2.1.0
 itsdangerous
-flask_cors
+flask_cors==3.0.10
 onnx==1.14.1
 onnxruntime-gpu>=1.13.0
 

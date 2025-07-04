@@ -15,10 +15,13 @@ services:
               capabilities: [gpu]
     runtime: nvidia
     
+ 
+ 
   background-removal-app:
     build:
       context: ./v-bg-remover
       dockerfile: Dockerfile
+    runtime: nvidia  # This is crucial for GPU access
     ports:
       - "5550:5550"
     volumes:
@@ -26,9 +29,7 @@ services:
       - /tmp/processed:/tmp/processed
     environment:
       - FLASK_ENV=production
-      - CUDA_VISIBLE_DEVICES=0
       - NVIDIA_VISIBLE_DEVICES=all
-      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
     deploy:
       resources:
         reservations:
