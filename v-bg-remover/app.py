@@ -226,7 +226,10 @@ def remove_background_from_video(input_video_path, output_video_path, progress_c
 def verify_api_key():
     if request.path == '/progress':
         return
-        
+    if request.path == '/health':
+        return
+    if request.path == '/gpu-status':
+        return
     api_key = request.headers.get('X-Api-Key')
     if api_key != API_KEY:
         logger.warning(f"Unauthorized access attempt from {request.remote_addr}")
