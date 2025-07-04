@@ -131,39 +131,37 @@ def remove_background_from_video(input_video_path, output_video_path, progress_c
                 break
             
             try:
-                
                 frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                
                 output_rgba = remove(frame_rgb, session=rembg_session)
-                
-                if output_bgr.shape[2] != 3:
-                    logger.warning("Frame has >3 channels, dropping extras")
-                    output_bgr = output_bgr[:, :, :3]
 
+                if output_rgba.shape[2] == 4:
+                    background = np.ones((height, width, 3), dtype=np.uint8) * 255
+                    alpha = output_rgba[:, :, 3:4] / 255.0
+                    output_rgb = output_rgba[:, :, :3] * alpha + background * (1 - alpha)
+                    output_bgr = cv2.cvtColor(output_rgb.astype(np.uint8), cv2.COLOR_RGB2BGR)
+                else:
+                    output_bgr = cv2.cvtColor(output_rgba, cv2.COLOR_RGB2BGR)
+
+                # Ensure format before writing
+                if output_bgr.shape[2] != 3:
+                    logger.warning(f"Frame {processed_frames} has {output_bgr.shape[2]} channels, expected 3")
+                    output_bgr = output_bgr[:, :, :3]
                 if output_bgr.shape[:2] != (height, width):
-                    logger.warning("Frame size mismatch, resizing")
+                    logger.warning(f"Frame {processed_frames} size mismatch, resizing")
                     output_bgr = cv2.resize(output_bgr, (width, height))
 
-                success = out.write(output_bgr.astype(np.uint8))
-                if not success:
-                    logger.error(f"Failed to write frame {processed_frames}")
-                
-                processed_frames += 1
-                progress_percentage = (processed_frames / frame_count) * 100
-                
-                if processed_frames % 10 == 0:
-                    elapsed_time = time.time() - start_time
-                    fps_current = processed_frames / elapsed_time if elapsed_time > 0 else 0
-                    logger.info(f"Processed {processed_frames}/{frame_count} frames ({progress_percentage:.1f}%), Current FPS: {fps_current:.1f}")
-                
-                progress_callback(progress_percentage)
-                
+                out.write(output_bgr.astype(np.uint8))
+
             except Exception as frame_error:
                 logger.error(f"Error processing frame {processed_frames}: {frame_error}")
-                out.write(frame)
-                processed_frames += 1
-                progress_percentage = (processed_frames / frame_count) * 100
-                progress_callback(progress_percentage)
+                
+                # fallback: write original frame to keep video flowing
+                if frame is not None and frame.shape[:2] == (height, width):
+                    out.write(frame)
+                else:
+                    logger.error(f"Skipping frame {processed_frames} due to shape mismatch")
+
+
                 
     except Exception as e:
         logger.error(f"Error during video processing: {e}")
