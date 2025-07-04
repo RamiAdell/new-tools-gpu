@@ -112,14 +112,31 @@ def remove_background_from_video(input_video_path, output_video_path, progress_c
     logger.info(f"Video properties: {width}x{height}, {fps} fps, {frame_count} frames")
     
     # Try multiple codecs in order of preference
-    codecs_to_try = ['avc1', 'mp4v', 'X264', 'H264']
-    out = None
+    codecs_to_try = [
+        ('mp4v', '.mp4'),  # MPEG-4 codec
+        ('avc1', '.mp4'),  # Alternative H.264
+        ('XVID', '.avi'),  # Fallback option
+        ('MJPG', '.avi')   # Another fallback
+    ]
     
-    for codec in codecs_to_try:
+    out = None
+    successful_codec = None
+    
+    for codec, ext in codecs_to_try:
+        # Adjust output path extension if needed
+        if not output_video_path.endswith(ext):
+            base_path = os.path.splitext(output_video_path)[0]
+            test_output_path = base_path + ext
+        else:
+            test_output_path = output_video_path
+            
         fourcc = cv2.VideoWriter_fourcc(*codec)
-        out = cv2.VideoWriter(output_video_path, fourcc, fps, (width, height), True)
+        out = cv2.VideoWriter(test_output_path, fourcc, fps, (width, height))
+        
         if out.isOpened():
             logger.info(f"Successfully opened video writer with codec: {codec}")
+            successful_codec = codec
+            output_video_path = test_output_path  # Update the output path
             break
         else:
             logger.warning(f"Failed to open video writer with codec: {codec}")
@@ -129,7 +146,6 @@ def remove_background_from_video(input_video_path, output_video_path, progress_c
         logger.error("Failed to open output video writer with any codec")
         raise Exception("Could not create output video file - no suitable codec found")
     
-    # Rest of your function remains the same...
     processed_frames = 0
     start_time = time.time()
     
@@ -141,10 +157,12 @@ def remove_background_from_video(input_video_path, output_video_path, progress_c
                 break
             
             try:
+                # Process frame
                 frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 output_rgba = remove(frame_rgb, session=rembg_session)
                 
-                if output_rgba.shape[2] == 4:  
+                # Handle alpha channel if present
+                if output_rgba.shape[2] == 4:
                     background = np.ones((height, width, 3), dtype=np.uint8) * 255
                     alpha = output_rgba[:, :, 3:4] / 255.0
                     output_rgb = output_rgba[:, :, :3] * alpha + background * (1 - alpha)
@@ -152,11 +170,19 @@ def remove_background_from_video(input_video_path, output_video_path, progress_c
                 else:
                     output_bgr = cv2.cvtColor(output_rgba, cv2.COLOR_RGB2BGR)
                 
-                success = out.write(output_bgr)
-                if not success:
-                    logger.error(f"Failed to write frame {processed_frames}")
+                # Ensure frame is in correct format before writing
+                if output_bgr.dtype != np.uint8:
+                    output_bgr = output_bgr.astype(np.uint8)
                 
+                # Verify frame dimensions match video writer expectations
+                if output_bgr.shape[1] != width or output_bgr.shape[0] != height:
+                    output_bgr = cv2.resize(output_bgr, (width, height))
+                
+                # Write frame
+                out.write(output_bgr)
                 processed_frames += 1
+                
+                # Update progress
                 progress_percentage = (processed_frames / frame_count) * 100
                 
                 if processed_frames % 10 == 0:
@@ -168,10 +194,15 @@ def remove_background_from_video(input_video_path, output_video_path, progress_c
                 
             except Exception as frame_error:
                 logger.error(f"Error processing frame {processed_frames}: {frame_error}")
-                out.write(frame)
-                processed_frames += 1
-                progress_percentage = (processed_frames / frame_count) * 100
-                progress_callback(progress_percentage)
+                # Try to write original frame as fallback
+                try:
+                    out.write(frame)
+                    processed_frames += 1
+                    progress_percentage = (processed_frames / frame_count) * 100
+                    progress_callback(progress_percentage)
+                except Exception as write_error:
+                    logger.error(f"Failed to write fallback frame: {write_error}")
+                    raise write_error
                 
     except Exception as e:
         logger.error(f"Error during video processing: {e}")
@@ -181,6 +212,15 @@ def remove_background_from_video(input_video_path, output_video_path, progress_c
         out.release()
         total_time = time.time() - start_time
         logger.info(f"Video processing completed: {processed_frames} frames in {total_time:.2f}s (avg {processed_frames/total_time:.1f} fps)")
+        
+        # Verify output file was created
+        if not os.path.exists(output_video_path):
+            logger.error(f"Output video file was not created: {output_video_path}")
+            raise Exception("Output video file was not created")
+        elif os.path.getsize(output_video_path) == 0:
+            logger.error(f"Output video file is empty: {output_video_path}")
+            os.remove(output_video_path)
+            raise Exception("Output video file is empty")
         
 @app.before_request
 def verify_api_key():
