@@ -35,11 +35,7 @@ services:
               count: 1
               capabilities: [gpu]
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5550/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+
   # text_to_cartoon-gpu:
   #   build: ./text-to-cartoon
   #   container_name: huggingface_gpu_api_prod
