@@ -112,7 +112,8 @@ def remove_background_from_video(input_video_path, output_video_path, progress_c
     logger.info(f"Video properties: {width}x{height}, {fps} fps, {frame_count} frames")
     
 
-    fourcc = cv2.VideoWriter_fourcc(*'H264')
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+
     out = cv2.VideoWriter(output_video_path, fourcc, fps, (width, height), True)
     
     if not out.isOpened():
