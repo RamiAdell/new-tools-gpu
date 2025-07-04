@@ -136,17 +136,15 @@ def remove_background_from_video(input_video_path, output_video_path, progress_c
                 
                 output_rgba = remove(frame_rgb, session=rembg_session)
                 
-                if output_rgba.shape[2] == 4:  
-                    background = np.ones((height, width, 3), dtype=np.uint8) * 255
-                    
-                    alpha = output_rgba[:, :, 3:4] / 255.0
-                    
-                    output_rgb = output_rgba[:, :, :3] * alpha + background * (1 - alpha)
-                    output_bgr = cv2.cvtColor(output_rgb.astype(np.uint8), cv2.COLOR_RGB2BGR)
-                else:
-                    output_bgr = cv2.cvtColor(output_rgba, cv2.COLOR_RGB2BGR)
-                
-                success = out.write(output_bgr)
+                if output_bgr.shape[2] != 3:
+                    logger.warning("Frame has >3 channels, dropping extras")
+                    output_bgr = output_bgr[:, :, :3]
+
+                if output_bgr.shape[:2] != (height, width):
+                    logger.warning("Frame size mismatch, resizing")
+                    output_bgr = cv2.resize(output_bgr, (width, height))
+
+                success = out.write(output_bgr.astype(np.uint8))
                 if not success:
                     logger.error(f"Failed to write frame {processed_frames}")
                 
