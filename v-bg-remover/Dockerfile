@@ -1,4 +1,4 @@
-FROM nvidia/cuda:12.1.1-base
+FROM nvidia/cuda:12.1.0-runtime-ubuntu22.04
 
 ENV PYTHONUNBUFFERED=1
 ENV CUDA_VISIBLE_DEVICES=0
